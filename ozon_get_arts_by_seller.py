@@ -30,28 +30,37 @@ class Ozn:
         self.page = self.context.new_page()
         self.page.add_init_script(js)
 
-    def get_data_by_page(self, art):
-        pass
+    def get_soup(self):
+        soup = BeautifulSoup(self.page.content(), 'lxml')
+        return soup
+
+    def get_urls_by_page(self, soup):
+        data = soup.find('div', class_='e5q', attrs={'data-widget': 'megaPaginator'})
+        all_arts = data.find_all('div', class_='w4i w5i tile-root')
+        for art in all_arts:
+            link = art.find('a')['href']
+            link = link.split('?')[0]
+            link = f'https://ozon.ru{link}'
+            print("Ссылка:", link)
+        print()
 
     def undetectable(self):
         """Переходим на страницу, обходим блокировку"""
         # url = f'https://bot.sannysoft.com'
         url = f'https://ozon.ru'
         self.page.goto(url, timeout=30000)
-        # button = self.page.locator('//*[@id="reload-button"]')
         # Ожидание появления кнопки с id="reload-button"
         button_locator = '//*[@id="reload-button"]'
-        self.page.wait_for_selector(button_locator)
-        # Теперь можно получить элемент
-        button = self.page.locator(button_locator)
-        if button:
+        try:
+            # Теперь можно получить элемент
+            button = self.page.wait_for_selector(button_locator, timeout=3000)
             button.click()
-        # self.page.goto('https://www.ozon.ru/seller/forward-zoo-1574061/tovary-dlya-zhivotnyh-12300/?miniapp=seller_1574061')
-        # self.page.locator('//*[@id="layoutPage"]/div[1]/div[5]/div/div/div[2]/div[3]')
-        time.sleep(5)
+            print(f'{bcolors.WARNING}Нашли кнопку ОБНОВИТЬ и нажимаем на нее{bcolors.ENDC}')
+        except:
+            print(f'{bcolors.OKGREEN}Кнопки ОБНОВИТЬ нет на странице{bcolors.ENDC}')
+        time.sleep(2)
 
-    def check_last_page(self):
-        soup = BeautifulSoup(self.page.content(), 'lxml')
+    def check_last_page(self, soup):
         no_data = soup.find('div', class_='yv4', attrs={'data-widget': 'searchResultsError'})
         if no_data:
             return False
@@ -61,13 +70,20 @@ class Ozn:
     def get_arts_by_seller_page(self):
         """Перебор по ссылкам на товары магазина, получение списка url на товары"""
         retry_count = 3
-        start_page = 1
-        finish_page_flag = True
-        while retry_count > 0 or finish_page_flag:
+        start_page = 3
+        while retry_count > 0:
             try:
-                self.page.goto(f'{SELLER_URL}&page={start_page}')
-                start_page += 1
-                finish_page_flag = self.check_last_page()
+                self.page.goto(f'{SELLER_URL}&page={start_page}', timeout=3000)
+                time.sleep(2)
+                soup = self.get_soup()
+                self.get_urls_by_page(soup)
+                finish_page_flag = self.check_last_page(soup)
+                if finish_page_flag:
+                    print(f'Страница {start_page} не последняя, продолжаем')
+                    start_page += 1
+                elif finish_page_flag is False:
+                    print(f'{bcolors.WARNING}Страница {start_page} уже не существует, завершаем работу.{bcolors.ENDC}')
+                    break
             except Exception as exp:
                 traceback_str = traceback.format_exc()
                 print(f'{bcolors.WARNING}Ошибка при загрузке страницы {SELLER_URL}&page={start_page}: {bcolors.ENDC}'
@@ -75,7 +91,8 @@ class Ozn:
                       f'{traceback_str}')
                 retry_count -= 1
                 if retry_count > 0:
-                    print(f'Повторная попытка загрузить страницу ({retry_count} осталось)')
+                    print(f'{bcolors.WARNING}Повторная попытка загрузить страницу ({retry_count} осталось)'
+                          f'{bcolors.ENDC}')
                 else:
                     print(f'{bcolors.FAIL}Превышено количество попыток для страницы:{bcolors.ENDC}'
                           f'\n{SELLER_URL}&page={start_page}')
