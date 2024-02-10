@@ -11,6 +11,11 @@ from bs4 import BeautifulSoup
 from config import SELLER_URL, bcolors
 
 
+def write_url(links):
+    with open('out/urls_articles.txt', 'a') as file:
+        file.writelines(link + '\n' for link in links)
+
+
 class Ozn:
     playwright = None
     browser = None
@@ -36,13 +41,15 @@ class Ozn:
 
     def get_urls_by_page(self, soup):
         data = soup.find('div', class_='e5q', attrs={'data-widget': 'megaPaginator'})
-        all_arts = data.find_all('div', class_='w4i w5i tile-root')
-        for art in all_arts:
-            link = art.find('a')['href']
-            link = link.split('?')[0]
-            link = f'https://ozon.ru{link}'
-            print("Ссылка:", link)
-        print()
+        links = [a['href'] for a in soup.find_all('a', class_='i7t tile-hover-target')]
+        links = [f'https://ozon.ru{x.split("?")[0]}' for x in links]
+        write_url(links)
+        # all_arts = data.find_all('div', class_='w4i w5i tile-root')
+        # for art in all_arts:
+        #     link = art.find('a')['href']
+        #     link = link.split('?')[0]
+        #     link = f'https://ozon.ru{link}'
+        #     write_url(url=link)
 
     def undetectable(self):
         """Переходим на страницу, обходим блокировку"""
@@ -70,11 +77,11 @@ class Ozn:
     def get_arts_by_seller_page(self):
         """Перебор по ссылкам на товары магазина, получение списка url на товары"""
         retry_count = 3
-        start_page = 3
+        start_page = 1
         while retry_count > 0:
             try:
                 self.page.goto(f'{SELLER_URL}&page={start_page}', timeout=3000)
-                time.sleep(2)
+                time.sleep(5)
                 soup = self.get_soup()
                 self.get_urls_by_page(soup)
                 finish_page_flag = self.check_last_page(soup)
