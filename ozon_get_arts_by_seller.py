@@ -1,14 +1,13 @@
-"""Скрипт открывает страницу продавца и проходит по всем страницам, забирая ссылки на товар"""
+"""Скрипт открывает страницу продавца и проходит по всем страницам, забирая ссылки на товар в файл urls_articles.txt"""
 
 import time
-from tqdm import tqdm
 import traceback
 
 import datetime
-from playwright.sync_api import Playwright, sync_playwright, expect
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from config import SELLER_URL, bcolors
+from config import SELLER_URL, bcolors, send_logs_to_telegram
 
 
 def write_url(links):
@@ -16,7 +15,7 @@ def write_url(links):
         file.writelines(link + '\n' for link in links)
 
 
-class Ozn:
+class OznArts:
     playwright = None
     browser = None
     page = None
@@ -40,16 +39,9 @@ class Ozn:
         return soup
 
     def get_urls_by_page(self, soup):
-        data = soup.find('div', class_='e5q', attrs={'data-widget': 'megaPaginator'})
         links = [a['href'] for a in soup.find_all('a', class_='i7t tile-hover-target')]
         links = [f'https://ozon.ru{x.split("?")[0]}' for x in links]
         write_url(links)
-        # all_arts = data.find_all('div', class_='w4i w5i tile-root')
-        # for art in all_arts:
-        #     link = art.find('a')['href']
-        #     link = link.split('?')[0]
-        #     link = f'https://ozon.ru{link}'
-        #     write_url(url=link)
 
     def undetectable(self):
         """Переходим на страницу, обходим блокировку"""
@@ -115,13 +107,13 @@ def main():
     print(f'Start: {t1}')
     try:
         with sync_playwright() as playwright:
-            Ozn(playwright=playwright).start()
+            OznArts(playwright=playwright).start()
         print(f'Успешно')
     except Exception as exp:
         print(exp)
     t2 = datetime.datetime.now()
     print(f'Finish: {t2}, TIME: {t2 - t1}')
-    # send_logs_to_telegram(message=f'Finish: {t2}, TIME: {t2 - t1}')
+    send_logs_to_telegram(message=f'Finish: {t2}, TIME: {t2 - t1}')
 
 
 if __name__ == '__main__':
