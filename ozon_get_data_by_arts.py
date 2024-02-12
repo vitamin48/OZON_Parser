@@ -58,7 +58,7 @@ class OznData:
             print(f'{bcolors.OKGREEN}Кнопки ОБНОВИТЬ нет на странице{bcolors.ENDC}')
         time.sleep(2)
 
-    def check_stock(self,soup):
+    def check_stock(self, soup):
         """Проверяем, не закончился ли товар"""
         pass
 
@@ -70,29 +70,24 @@ class OznData:
         # Парсим JSON-данные
         data = json.loads(script_content) if script_content else None
         # Список ключей, которые нужно извлечь в новый словарь
-        desired_keys = ['name','sku','brand', 'description','offers.price', 'aggregateRating.ratingValue','aggregateRating.reviewCount']
+        desired_keys = ['name', 'sku', 'brand', 'description', 'offers.price', 'aggregateRating.ratingValue',
+                        'aggregateRating.reviewCount']
         filtered_dict = {key: reduce(lambda d, k: d.get(k, {}), key.split('.'), data) for key in desired_keys}
         "Извлекаем характеристики"
-        characteristics_block = soup.find('div', {'data-widget': 'webCharacteristics'})
-        if characteristics_block:
-            for item in characteristics_block.find_all('div', {'class': 'vj0'}):
-                features = {
-                    f.find('dt', {'class': 'j3v'}).span.text.strip(): f.find('dd', {'class': 'vj3'}).text.strip() for f
-                    in item.find_all('dl', {'class': 'j4v'})}
-                filtered_dict['characteristics'] = features
-                # characteristics_dict.update(features)
-
-
-
-
-
-
+        "-------------------------------------------------"
+        # characteristics_block = soup.find('div', {'data-widget': 'webCharacteristics'})
+        # if characteristics_block:
+        #     for item in characteristics_block.find_all('div', {'class': 'vj0'}):
+        #         features = {
+        #             f.find('dt', {'class': 'j3v'}).span.text.strip(): f.find('dd', {'class': 'vj3'}).text.strip() for f
+        #             in item.find_all('dl', {'class': 'j4v'})}
+        #         filtered_dict['characteristics'] = features
+        #         # characteristics_dict.update(features)
+        "-------------------------------------------------"
         # Находим блок с характеристиками
         characteristics_block = soup.find('div', {'id': 'section-characteristics'})
-
         # Инициализируем пустой словарь для характеристик
         characteristics_dict = {}
-
         # Если блок с характеристиками существует
         if characteristics_block:
             # Находим все элементы dl с классом 'j4v' внутри блока характеристик
@@ -100,16 +95,9 @@ class OznData:
                 # Извлекаем текст из элементов dt и dd
                 key = dl_elem.find('dt', {'class': 'j3v'}).span.text.strip()
                 value = dl_elem.find('dd', {'class': 'vj3'}).text.strip()
-
                 # Добавляем пару ключ-значение в словарь характеристик
                 characteristics_dict[key] = value
-
-
-
-
-
-
-
+        filtered_dict['characteristics'] = characteristics_dict
         sku = filtered_dict.get('sku')
         self.res_dict[sku] = filtered_dict
         with open('out/ozon_data.json', 'w', encoding='utf-8') as json_file:
