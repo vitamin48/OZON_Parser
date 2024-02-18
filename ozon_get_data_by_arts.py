@@ -58,10 +58,6 @@ class OznData:
             print(f'{bcolors.OKGREEN}Кнопки ОБНОВИТЬ нет на странице{bcolors.ENDC}')
         time.sleep(2)
 
-    def check_stock(self, soup):
-        """Проверяем, не закончился ли товар"""
-        pass
-
     def save_data_from_soup(self, soup):
         """Извлекаем первую часть данных"""
         script_tag = soup.find('script', {'type': 'application/ld+json'})
@@ -74,16 +70,6 @@ class OznData:
                         'aggregateRating.reviewCount']
         filtered_dict = {key: reduce(lambda d, k: d.get(k, {}), key.split('.'), data) for key in desired_keys}
         "Извлекаем характеристики"
-        "-------------------------------------------------"
-        # characteristics_block = soup.find('div', {'data-widget': 'webCharacteristics'})
-        # if characteristics_block:
-        #     for item in characteristics_block.find_all('div', {'class': 'vj0'}):
-        #         features = {
-        #             f.find('dt', {'class': 'j3v'}).span.text.strip(): f.find('dd', {'class': 'vj3'}).text.strip() for f
-        #             in item.find_all('dl', {'class': 'j4v'})}
-        #         filtered_dict['characteristics'] = features
-        #         # characteristics_dict.update(features)
-        "-------------------------------------------------"
         # Находим блок с характеристиками
         characteristics_block = soup.find('div', {'id': 'section-characteristics'})
         # Инициализируем пустой словарь для характеристик
@@ -97,9 +83,12 @@ class OznData:
                 value = dl_elem.find('dd', {'class': 'vj3'}).text.strip()
                 # Добавляем пару ключ-значение в словарь характеристик
                 characteristics_dict[key] = value
+        "Объединяем словари"
         filtered_dict['characteristics'] = characteristics_dict
         sku = filtered_dict.get('sku')
+        "Добавляем результирующи словарь в итоговый на основе SKU"
         self.res_dict[sku] = filtered_dict
+        "Записываем результат в json"
         with open('out/ozon_data.json', 'w', encoding='utf-8') as json_file:
             json.dump(self.res_dict, json_file, indent=2, ensure_ascii=False)
 
