@@ -59,7 +59,7 @@ class OznData:
         time.sleep(2)
 
     def save_data_from_soup(self, soup):
-        """Извлекаем первую часть данных"""
+        """Извлекаем первую часть данных из JSON"""
         script_tag = soup.find('script', {'type': 'application/ld+json'})
         # Получаем содержимое тега <script>
         script_content = script_tag.contents[0] if script_tag else None
@@ -69,24 +69,38 @@ class OznData:
         desired_keys = ['name', 'sku', 'brand', 'description', 'offers.price', 'aggregateRating.ratingValue',
                         'aggregateRating.reviewCount']
         filtered_dict = {key: reduce(lambda d, k: d.get(k, {}), key.split('.'), data) for key in desired_keys}
+        "Извлекаем описание"
+        # Найдем блок с описанием товара
+        description_section = soup.find('div', id='section-description')
+        allspan = set([x.text.strip() for x in description_section.find_all('span')])
+        # Извлечем текст из всех тегов <span> внутри блока с описанием
+        description_text = '. '.join(span for span in allspan)
         "Извлекаем характеристики"
         # Находим блок с характеристиками
         characteristics_block = soup.find('div', {'id': 'section-characteristics'})
         # Инициализируем пустой словарь для характеристик
         characteristics_dict = {}
-        # Если блок с характеристиками существует
-        if characteristics_block:
-            # Находим все элементы dl с классом 'j4v' внутри блока характеристик
-            for dl_elem in characteristics_block.find_all('dl', {'class': 'j4v'}):
-                # Извлекаем текст из элементов dt и dd
-                key = dl_elem.find('dt', {'class': 'j3v'}).span.text.strip()
-                value = dl_elem.find('dd', {'class': 'vj3'}).text.strip()
-                # Добавляем пару ключ-значение в словарь характеристик
-                characteristics_dict[key] = value
+        # Найдем все теги <dl> внутри блока с характеристиками, которые отвечают за пары характеристик
+        dl_tags = characteristics_block.find_all('dl')
+        for dl_tag in dl_tags:
+            dt_tag = dl_tag.find('dt')
+            dd_tag = dl_tag.find('dd')
+            if dt_tag and dd_tag:
+                characteristic_name = dt_tag.text.strip()
+                characteristic_value = dd_tag.text.strip()
+                characteristics_dict[characteristic_name] = characteristic_value
         "Объединяем словари"
         filtered_dict['characteristics'] = characteristics_dict
+        filtered_dict['description_main'] = description_text
+        "Находим изображения"
+        # Найти все div с классом 'jq4'
+        divs_with_images = soup.find_all('div', class_='jq4')
+        # Извлечь ссылки на изображения из каждого найденного div
+        image_links = [div.find('img')['src'] for div in divs_with_images]
+        image_large_links = list(set([x.replace('wc50', 'wc1000') for x in image_links]))
+        filtered_dict['imgs'] = image_large_links
         sku = filtered_dict.get('sku')
-        "Добавляем результирующи словарь в итоговый на основе SKU"
+        "Добавляем результирующий словарь в итоговый на основе SKU"
         self.res_dict[sku] = filtered_dict
         "Записываем результат в json"
         with open('out/ozon_data.json', 'w', encoding='utf-8') as json_file:
