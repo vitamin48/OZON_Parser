@@ -39,8 +39,9 @@ class OznArts:
         return soup
 
     def get_urls_by_page(self, soup):
-        links = [a['href'] for a in soup.find_all('a', class_='i7t tile-hover-target')]
-        links = [f'https://ozon.ru{x.split("?")[0]}' for x in links]
+        mega_paginator = soup.find('div', class_='pe1', attrs={'data-widget': 'megaPaginator'})
+        links = [link['href'] for link in mega_paginator.find_all('a', href=True) if link['href'].startswith('/product/')]
+        links = set([f'https://ozon.ru{x.split("?")[0]}' for x in links])
         write_url(links)
 
     def undetectable(self):
@@ -60,8 +61,9 @@ class OznArts:
         time.sleep(2)
 
     def check_last_page(self, soup):
-        no_data = soup.find('div', class_='yv4', attrs={'data-widget': 'searchResultsError'})
-        if no_data:
+        zv = soup.find('div', class_='zv')
+        # no_data = soup.find('div', class_='yv4', attrs={'data-widget': 'searchResultsError'})
+        if zv:
             return False
         else:
             return True
@@ -78,7 +80,7 @@ class OznArts:
                 self.get_urls_by_page(soup)
                 finish_page_flag = self.check_last_page(soup)
                 if finish_page_flag:
-                    print(f'Страница {start_page} не последняя, продолжаем')
+                    print(f'Страница {start_page} успешно отработана')
                     start_page += 1
                 elif finish_page_flag is False:
                     print(f'{bcolors.WARNING}Страница {start_page} уже не существует, завершаем работу.{bcolors.ENDC}')
