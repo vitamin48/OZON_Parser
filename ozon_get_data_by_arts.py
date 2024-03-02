@@ -4,6 +4,7 @@ import traceback
 import datetime
 import json
 from functools import reduce
+from collections import OrderedDict
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from bs4 import BeautifulSoup
@@ -72,9 +73,17 @@ class OznData:
         "Извлекаем описание"
         # Найдем блок с описанием товара
         description_section = soup.find('div', id='section-description')
-        allspan = set([x.text.strip() for x in description_section.find_all('span')])
-        # Извлечем текст из всех тегов <span> внутри блока с описанием
-        description_text = '. '.join(span for span in allspan)
+        section_text_description = description_section.get_text(separator=' ', strip=True).replace('Описание', '').replace(
+            'Показать полностью', '')
+        # find_all_span = description_section.find_all('span')
+        # allspan_lst = [x.text.strip() for x in description_section.find_all('span')]
+        # # Создаем OrderedDict, где ключи - это элементы списка, а значения - None
+        # ordered_dict = OrderedDict.fromkeys(allspan_lst)
+        # # Получаем список без дубликатов с сохранением порядка
+        # unique_list = list(ordered_dict.keys())
+        # allspan = set([x.text.strip() for x in description_section.find_all('span')])
+        # # Извлечем текст из всех тегов <span> внутри блока с описанием
+        # description_text = '. '.join(span for span in unique_list)
         "Извлекаем характеристики"
         # Находим блок с характеристиками
         characteristics_block = soup.find('div', {'id': 'section-characteristics'})
@@ -91,7 +100,7 @@ class OznData:
                 characteristics_dict[characteristic_name] = characteristic_value
         "Объединяем словари"
         filtered_dict['characteristics'] = characteristics_dict
-        filtered_dict['description_main'] = description_text
+        filtered_dict['description_main'] = section_text_description
         "Находим изображения"
         # Найти все div с классом 'jq4'
         divs_with_images = soup.find_all('div', class_='jq4')
